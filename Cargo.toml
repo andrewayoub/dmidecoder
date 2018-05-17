@@ -1,0 +1,6 @@
+[package]
+name = "dmidecoder"
+version = "0.1.0"
+authors = ["andrewayoub <andrew.a.mikhaeel@gmail.com>"]
+
+[dependencies]
