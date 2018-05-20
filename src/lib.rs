@@ -47,6 +47,17 @@ pub mod dmidecoder {
         List,
     }
 
+    fn clean_str(line :&str) -> String {
+        let mut i = 0;
+        for c in line.chars() {
+            if c.is_whitespace() || c == ':' {
+                i = i + 1;
+            } else {
+                return line[i..].to_string();
+            }
+        }
+        return String::from(line.to_string())
+    }
     fn get_indentation(line :&str) -> u8 {
         let mut count = 0;
         for c in line.chars() {
@@ -108,9 +119,9 @@ pub mod dmidecoder {
                             sections.push(current_section);
                             current_section = Section::new();
                         }
-                        current_section.handle_line = String::from(line);
+                        current_section.handle_line = clean_str(line);
                     } else if !current_section.handle_line.is_empty() && !line.is_empty() {
-                        current_section.title = String::from(line);
+                        current_section.title = clean_str(line);
                     }
                 },
                 State::Kv => {
@@ -121,12 +132,12 @@ pub mod dmidecoder {
                     let colon_index = line.find(':').unwrap_or(line.len());
                     if colon_index != line.len()
                     {
-                        current_property.name = String::from(&line[..colon_index]);
-                        current_property.value = String::from(&line[colon_index..]);
+                        current_property.name = clean_str(&line[..colon_index]);
+                        current_property.value = clean_str(&line[colon_index..]);
                     }
                 },
                 State::List => {
-                   current_property.items.push(String::from(line))
+                   current_property.items.push(clean_str(line))
                 }
             }
         }
