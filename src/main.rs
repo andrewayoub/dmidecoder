@@ -14,6 +14,9 @@ impl Property {
             items: Vec::new(),
         }
     }
+    fn is_empty(&self) -> bool {
+        return self.name.is_empty() && self.value.is_empty() && self.items.is_empty()
+    }
 }
 
 #[derive(Debug)]
@@ -31,6 +34,9 @@ impl Section {
             properties: Vec::new(),
         }
     }
+    fn is_empty(&self) -> bool {
+        return self.title.is_empty() && self.handle_line.is_empty() && self.properties.is_empty()
+    }
 }
 #[derive(Debug)]
 enum State {
@@ -42,10 +48,10 @@ enum State {
 fn get_indentation(line :&str) -> u8 {
     let mut count = 0;
     for c in line.chars() {
-        if c == ' ' {
+        if c.is_whitespace() {
             count = count + 1;
         } else {
-            count;
+            return count;
         }
     }
     return count;
@@ -104,54 +110,74 @@ BIOS Language Information
     let mut last_indentation = 0;
 
     for line in sample.lines() {
-        println!("{:?}:\t {}",state, line);
-        if line.starts_with("Handle"){
-            last_indentation = 0;
-            sections.push(current_section);
-            current_section = Section::new();
-            state = State::Section;
-            continue;
-        }
-
+        // decide state
+        // if indentation didn't change state shouldn't change
         let indentation = get_indentation(line);
-        
-        match state {
-            State::Section => {
-                current_section.title = String::from(line);
-                state = State::Kv;
-            },
-            State::Kv => {
-                    if indentation == last_indentation{
-                        let colon_index = line.find(":");
-                        match colon_index {
-                            Some(i) => {
-                                current_section.properties.push(current_property);
-                                current_property = Property {
-                                    name : String::from(&line[..i]),
-                                    value : String::from(&line[i+2..]),
-                                    items : Vec::new(),
-                                }
-                            },
-                            None => (),
-                        }
-                    } else if indentation > last_indentation{
-                        current_property.items.push(String::from(line));
-                        state = State::List;
-                    } else if indentation < last_indentation{
-                        current_section.properties.push(current_property);
-                        current_property = Property::new();
+        if indentation > last_indentation {
+            match state {
+                State::Section => state = State::Kv,
+                State::Kv => state = State::List,
+                State::List => (),
+            }
+        } else if indentation < last_indentation {
+            match state {
+                State::Section => (),
+                State::Kv => state = State::Section,
+                State::List => {
+                    if indentation == 0 {
                         state = State::Section;
+                    } else {
+                        state = State::Kv;
                     }
-            },
-            State::List => {
-               if indentation == last_indentation{
-                   current_property.items.push(String::from(line))
-               } else if indentation < last_indentation {
-                   state = State::Kv;
-               }
+                },
             }
         }
         last_indentation = indentation;
+        println!("{} : {:?}:\t{}", indentation, state, line);
+        match state {
+            State::Section => {
+                println!(">>>>>>{:?}", current_section.title);
+
+                if line.starts_with("Handle") {
+                    if !current_section.is_empty() {
+                        if !current_property.is_empty(){
+                            current_section.properties.push(current_property);
+                            current_property = Property::new();
+                        }
+                        sections.push(current_section);
+                        current_section = Section::new();
+                    }
+                    current_section.handle_line = String::from(line);
+                } else if !current_section.handle_line.is_empty() && !line.is_empty() {
+                    println!("IN TITLEEEEE {}", line);
+                    current_section.title = String::from(line);
+                }
+            },
+            State::Kv => {
+                if !current_property.is_empty() {
+                    current_section.properties.push(current_property);
+                    current_property = Property::new();
+                }
+                let colon_index = line.find(':').unwrap_or(line.len());
+                if colon_index != line.len()
+                {
+                    current_property.name = String::from(&line[..colon_index]);
+                    current_property.value = String::from(&line[colon_index..]);
+                }
+            },
+            State::List => {
+               current_property.items.push(String::from(line))
+            }
+        }
     }
+    if !current_property.is_empty(){
+        current_section.properties.push(current_property);
+    }
+    if !current_section.is_empty(){
+        sections.push(current_section);
+        println!("IN PUSH");
+
+    }
+    
     println!("{:?}", sections)
 }
