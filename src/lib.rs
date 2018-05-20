@@ -59,16 +59,18 @@ pub mod dmidecoder {
         return count;
     }
 
-    fn get_state(state :State, line :&str, last_indentation :&u8) -> State {
+    fn get_state(state :State, line :&str, last_indentation :u8) -> State {
         let mut new_state = State::Section;
         let indentation = get_indentation(line);
-        if indentation > *last_indentation {
+        if indentation == last_indentation {
+            return state;
+        } else if indentation > last_indentation {
             match state {
                 State::Section => new_state = State::Kv,
                 State::Kv => new_state = State::List,
                 State::List => (),
             }
-        } else if indentation < *last_indentation {
+        } else if indentation < last_indentation {
             match state {
                 State::Section => (),
                 State::Kv => new_state = State::Section,
@@ -93,7 +95,7 @@ pub mod dmidecoder {
 
         for line in data.lines() {
             let indentation = get_indentation(line);
-            state = get_state(state, line, &last_indentation);
+            state = get_state(state, line, last_indentation);
             last_indentation = indentation;
             match state {
                 State::Section => {
@@ -108,7 +110,6 @@ pub mod dmidecoder {
                         }
                         current_section.handle_line = String::from(line);
                     } else if !current_section.handle_line.is_empty() && !line.is_empty() {
-                        println!("IN TITLEEEEE {}", line);
                         current_section.title = String::from(line);
                     }
                 },
