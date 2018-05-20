@@ -1,42 +1,39 @@
 pub mod dmidecoder {
-
+    use std::collections::HashMap;
+ 
     #[derive(Debug)]
     pub struct Property {
-        name: String,
-        value: String,
-        items: Vec<String>,
+        pub value: String,
+        pub items: Vec<String>,
     }
 
     impl Property {
         pub fn new() -> Property {
             Property {
-                name: String::new(),
                 value: String::new(),
                 items: Vec::new(),
             }
         }
         pub fn is_empty(&self) -> bool {
-            return self.name.is_empty() && self.value.is_empty() && self.items.is_empty()
+            return self.value.is_empty() && self.items.is_empty()
         }
     }
 
     #[derive(Debug)]
     pub struct Section {
-        title: String,
-        handle_line: String,
-        properties: Vec<Property>,
+        pub handle_line: String,
+        pub properties: HashMap<String, Property>,
     }
 
     impl Section {
         fn new() -> Section {
             Section {
-                title: String::new(),
                 handle_line: String::new(),
-                properties: Vec::new(),
+                properties: HashMap::new(),
             }
         }
         fn is_empty(&self) -> bool {
-            return self.title.is_empty() && self.handle_line.is_empty() && self.properties.is_empty()
+            return self.handle_line.is_empty() && self.properties.is_empty()
         }
     }
 
@@ -97,11 +94,13 @@ pub mod dmidecoder {
         return new_state;
     }
 
-    pub fn parse(data :&str) -> Vec<Section> {
-        let mut sections: Vec<Section> = Vec::new();
+    pub fn parse(data :&str) -> HashMap<String, Section> {
+        let mut sections = HashMap::new();
         let mut state = State::Section;
         let mut current_section: Section = Section::new();
-        let mut current_property: Property = Property::new(); 
+        let mut current_section_name: String = String::new();
+        let mut current_property: Property = Property::new();
+        let mut current_property_name = String::new(); 
         let mut last_indentation = 0;
 
         for line in data.lines() {
@@ -111,28 +110,31 @@ pub mod dmidecoder {
             match state {
                 State::Section => {
                     if line.starts_with("Handle") {
-                        if !current_section.is_empty() {
-                            if !current_property.is_empty(){
-                                current_section.properties.push(current_property);
+                        if !current_section.is_empty() && !current_section_name.is_empty() {
+                            if !current_property.is_empty() && !current_property_name.is_empty() {
+                                current_section.properties.insert(current_property_name, current_property);
                                 current_property = Property::new();
+                                current_property_name = String::new();
                             }
-                            sections.push(current_section);
+                            sections.insert(current_section_name, current_section);
                             current_section = Section::new();
+                            current_section_name = String::new();
                         }
                         current_section.handle_line = clean_str(line);
                     } else if !current_section.handle_line.is_empty() && !line.is_empty() {
-                        current_section.title = clean_str(line);
+                        current_section_name = clean_str(line);
                     }
                 },
                 State::Kv => {
-                    if !current_property.is_empty() {
-                        current_section.properties.push(current_property);
+                    if !current_property.is_empty() && !current_property_name.is_empty() {
+                        current_section.properties.insert(current_property_name, current_property);
                         current_property = Property::new();
+                        current_property_name = String::new();
                     }
                     let colon_index = line.find(':').unwrap_or(line.len());
                     if colon_index != line.len()
                     {
-                        current_property.name = clean_str(&line[..colon_index]);
+                        current_property_name = clean_str(&line[..colon_index]);
                         current_property.value = clean_str(&line[colon_index..]);
                     }
                 },
@@ -141,11 +143,11 @@ pub mod dmidecoder {
                 }
             }
         }
-        if !current_property.is_empty(){
-            current_section.properties.push(current_property);
+        if !current_property.is_empty() && !current_property_name.is_empty() {
+            current_section.properties.insert(current_property_name, current_property);
         }
-        if !current_section.is_empty(){
-            sections.push(current_section);
+        if !current_section.is_empty() && !current_section_name.is_empty(){
+            sections.insert(current_section_name, current_section);
         }
         return sections;
     }
