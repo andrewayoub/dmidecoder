@@ -12,10 +12,6 @@ pub mod dmidecoder {
 
     impl Property {
         /// Returns empty property
-        /// # examples
-        /// ```
-        /// let property: Property = Property::new();
-        /// ```
         pub fn new() -> Property {
             Property {
                 value: String::new(),
@@ -23,10 +19,6 @@ pub mod dmidecoder {
             }
         }
         /// Check if the property is empty
-        /// # examples
-        /// ```
-        /// property.is_empty()
-        /// ```
         pub fn is_empty(&self) -> bool {
             return self.value.is_empty() && self.items.is_empty()
         }
@@ -41,10 +33,6 @@ pub mod dmidecoder {
 
     impl Section {
         /// Returns empty Section
-        /// # examples
-        /// ```
-        /// let section: Section = Section::new();
-        /// ```
         fn new() -> Section {
             Section {
                 handle_line: String::new(),
@@ -52,10 +40,6 @@ pub mod dmidecoder {
             }
         }
         /// Check if the section is empty
-        /// # examples
-        /// ```
-        /// section.is_empty()
-        /// ```
         fn is_empty(&self) -> bool {
             return self.handle_line.is_empty() && self.properties.is_empty()
         }
