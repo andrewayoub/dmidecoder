@@ -1,6 +1,9 @@
 pub mod dmidecoder {
     use std::collections::HashMap;
- 
+    
+    /// Property represents a single item inside a section
+    /// it contains value and items as vector
+    /// you should have at least on of these fields set
     #[derive(Debug)]
     pub struct Property {
         pub value: String,
@@ -8,17 +11,28 @@ pub mod dmidecoder {
     }
 
     impl Property {
+        /// Returns empty property
+        /// # examples
+        /// ```
+        /// let property: Property = Property::new();
+        /// ```
         pub fn new() -> Property {
             Property {
                 value: String::new(),
                 items: Vec::new(),
             }
         }
+        /// Check if the property is empty
+        /// # examples
+        /// ```
+        /// property.is_empty()
+        /// ```
         pub fn is_empty(&self) -> bool {
             return self.value.is_empty() && self.items.is_empty()
         }
     }
 
+    /// Section represents a full section of data
     #[derive(Debug)]
     pub struct Section {
         pub handle_line: String,
@@ -26,24 +40,36 @@ pub mod dmidecoder {
     }
 
     impl Section {
+        /// Returns empty Section
+        /// # examples
+        /// ```
+        /// let section: Section = Section::new();
+        /// ```
         fn new() -> Section {
             Section {
                 handle_line: String::new(),
                 properties: HashMap::new(),
             }
         }
+        /// Check if the section is empty
+        /// # examples
+        /// ```
+        /// section.is_empty()
+        /// ```
         fn is_empty(&self) -> bool {
             return self.handle_line.is_empty() && self.properties.is_empty()
         }
     }
 
+    /// State will be used in parsing
+    /// will indecate how to handle the current line
     #[derive(Debug)]
     enum State {
         Section,
         Kv,
         List,
     }
-
+    /// clean string by removing white spaces from the begining
     fn clean_str(line :&str) -> String {
         let mut i = 0;
         for c in line.chars() {
@@ -55,6 +81,7 @@ pub mod dmidecoder {
         }
         return String::from(line.to_string())
     }
+    /// get the current indentation level by counting the white spaces or taps
     fn get_indentation(line :&str) -> u8 {
         let mut count = 0;
         for c in line.chars() {
@@ -66,7 +93,7 @@ pub mod dmidecoder {
         }
         return count;
     }
-
+    /// decide the current state of the line
     fn get_state(state :State, line :&str, last_indentation :u8) -> State {
         let mut new_state = State::Section;
         let indentation = get_indentation(line);
@@ -93,7 +120,7 @@ pub mod dmidecoder {
         }
         return new_state;
     }
-
+    // Parse data into sections hashmap
     pub fn parse(data :&str) -> HashMap<String, Section> {
         let mut sections = HashMap::new();
         let mut state = State::Section;
@@ -104,12 +131,17 @@ pub mod dmidecoder {
         let mut last_indentation = 0;
 
         for line in data.lines() {
+            // decide state
             let indentation = get_indentation(line);
             state = get_state(state, line, last_indentation);
             last_indentation = indentation;
+            // match the state to parse each line
             match state {
                 State::Section => {
                     if line.starts_with("Handle") {
+                        // when we find handle line this means it's the begining of a new section
+                        // so we will push the last section if it's not empty
+                        // and create another one with the found handle line
                         if !current_section.is_empty() && !current_section_name.is_empty() {
                             if !current_property.is_empty() && !current_property_name.is_empty() {
                                 current_section.properties.insert(current_property_name, current_property);
@@ -121,11 +153,13 @@ pub mod dmidecoder {
                             current_section_name = String::new();
                         }
                         current_section.handle_line = clean_str(line);
+                        // if we have the handle line already we will read the follopwing line as the title
                     } else if !current_section.handle_line.is_empty() && !line.is_empty() {
                         current_section_name = clean_str(line);
                     }
                 },
                 State::Kv => {
+                    // will check if we have current properety data to push before creating another one from the current line
                     if !current_property.is_empty() && !current_property_name.is_empty() {
                         current_section.properties.insert(current_property_name, current_property);
                         current_property = Property::new();
@@ -141,6 +175,7 @@ pub mod dmidecoder {
                 }
             }
         }
+        // finalize by pushing the last property and the current section if there is data00 
         if !current_property.is_empty() && !current_property_name.is_empty() {
             current_section.properties.insert(current_property_name, current_property);
         }
