@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/andrewayoub/dmidecoder.svg?branch=master)](https://travis-ci.org/andrewayoub/dmidecoder)
-# Dmidecoder parser with rust
+# Dmidecode parser with rust
 
-Convert Dmidecoder output into properly formated data (HashMap)
+Convert Dmidecode output into properly formated data (HashMap)
 
 ## installation
 
